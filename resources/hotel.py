@@ -5,12 +5,8 @@ from models.hotel import HotelModel
 
 class Hoteis(Resource):
     def get(self):
-        hoteis_all = []
         hoteis = HotelModel.query.all()
-        for hotel in hoteis:
-            hoteis_all.append(hotel.json())
-
-        return {'hoteis': hoteis_all}
+        return {'hoteis': [hotel.json() for hotel in hoteis ]}
 
 
 class Hotel(Resource):

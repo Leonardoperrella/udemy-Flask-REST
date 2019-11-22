@@ -49,7 +49,6 @@ class Hoteis(Resource):
         connection = sqlite3.connect('banco.db')
         cursor = connection.cursor()
         
-        
         dados = path_params.parse_args()
         
         dados_validos = {chave:dados[chave] for chave in dados if dados[chave] is not None}

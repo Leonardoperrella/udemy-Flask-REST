@@ -1,40 +1,14 @@
+import sqlite3
 from flask_restful import Resource, reqparse
 from models.hotel import HotelModel
+from models.site import SiteModel
 from flask_jwt_extended import jwt_required
-import sqlite3
+from resources.filtros import normalize_path_params, consulta
 
-
-def normalize_path_params(cidade=None,
-                          estrelas_min=0,
-                          estrelas_max=5,
-                          diaria_min=0,
-                          diaria_max=10000,
-                          limit=50,
-                          offset=0,
-                          **dados):
-    if cidade:
-        return {
-            'estrelas_min': estrelas_min,
-            'estrelas_max': estrelas_max,
-            'diaria_min': diaria_min,
-            'diaria_max': diaria_max,
-            'cidade': cidade,
-            'limit': limit,
-            'offset': offset
-        }
-
-    return {
-            'estrelas_min': estrelas_min,
-            'estrelas_max': estrelas_max,
-            'diaria_min': diaria_min,
-            'diaria_max': diaria_max,
-            'limit': limit,
-            'offset': offset
-        }
-          
 
 class Hoteis(Resource):
     # path hoteis?cidade=Rio de Janeiro&estrelas_min=4&diaria_max=400
+    consulta = consulta
     path_params = reqparse.RequestParser()
     path_params.add_argument('estrelas_min', type=float)
     path_params.add_argument('estrelas_max', type=float)
@@ -56,23 +30,15 @@ class Hoteis(Resource):
         
         dados_validos = {chave:dados[chave] for chave in dados if dados[chave] is not None}
         parametros = normalize_path_params(**dados_validos)
-         
-
+        
         if not parametros.get('cidade'):
-            consulta = 'SELECT * FROM hoteis \
-                        WHERE (estrelas > ? and estrelas <= ?) \
-                        AND (diaria > ? and diaria <= ?) \
-                        LIMIT ? OFFSET ?'
-            tupla = tuple([parametros[chave] for chave in parametros])
-            resultado = cursor.execute(consulta, tupla)
+            self.consulta += 'LIMIT ? OFFSET ?'
         else:
-            consulta = 'SELECT * FROM hoteis \
-                        WHERE (estrelas > ? and estrelas <= ?) \
-                        AND (diaria > ? and diaria <= ?) \
-                        AND cidade = ? \
-                        LIMIT ? OFFSET ?'
-            tupla = tuple([parametros[chave] for chave in parametros])
-            resultado = cursor.execute(consulta, tupla)            
+            self.consulta += 'AND cidade = ? LIMIT ? OFFSET ?'
+        
+        tupla = tuple([parametros[chave] for chave in parametros])
+        print(tupla)
+        resultado = cursor.execute(self.consulta, tupla)            
         
         hoteis = []
         for linha in resultado:
@@ -81,7 +47,8 @@ class Hoteis(Resource):
                 'nome': linha[1],
                 'estrelas': linha[2],
                 'diaria': linha[3],
-                'cidade': linha[4]})
+                'cidade': linha[4],
+                'site_id': linha[5]})
 
         return {'hoteis': hoteis}
 
@@ -101,6 +68,7 @@ class Hotel(Resource):
                             )
     argumentos.add_argument('diaria')
     argumentos.add_argument('cidade')
+    argumentos.add_argument('site_id', type=int, required=True, help='Every hotel needs to be linked a site')
 
     def get(self, hotel_id):
         hotel = HotelModel.find_hotel(hotel_id)
@@ -111,11 +79,16 @@ class Hotel(Resource):
     @jwt_required
     def post(self, hotel_id):
 
-        if HotelModel.find_hotel(hotel_id):
-            return {'message': f"Hotel id '{hotel_id}' already exixts."}, 400 #bad request
-
         dados = self.argumentos.parse_args()
+        
+        if HotelModel.find_hotel(hotel_id) and HotelModel.find_hotel_by_site_id(dados.get('site_id')):
+            return {'message': f"Hotel id '{hotel_id}' already exists."}, 400 #bad request
 
+
+        if not SiteModel.find_by_id(dados.get('site_id')):
+            return {'message': 'The hotel must be associated to valid site id'}, 400
+
+        
         try:
             nome = dados.get('nome').strip()
         except:
@@ -123,8 +96,9 @@ class Hotel(Resource):
 
         if not nome:
             return {'message': 'The field name cannot be blank or null'}
-
+        
         hotel = HotelModel(hotel_id, **dados)
+        
         try:
             hotel.save_hotel()
         except:

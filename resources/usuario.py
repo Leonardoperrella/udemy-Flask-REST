@@ -9,13 +9,13 @@ atributos = reqparse.RequestParser()
 atributos.add_argument('login', 
                         type=str, 
                         required=True,
-                        help="The field login cannot be blank"
+                        help='The field login cannot be blank'
                         )
 
 atributos.add_argument('senha', 
                         type=str, 
                         required=True,
-                        help="The field senha cannot be blank"
+                        help='The field senha cannot be blank'
                         )
 
 class User(Resource):   
@@ -25,7 +25,7 @@ class User(Resource):
         user = UserModel.find_user(user_id)
         
         if not user:
-            return {"message": "User not found"}, 404
+            return {'message': 'User not found'}, 404
         return user.json()
 
     @jwt_required
@@ -33,13 +33,13 @@ class User(Resource):
         
         user = UserModel.find_user(user_id)
         if not user:
-            return {"message": "User not found"}, 404
+            return {'message': 'User not found'}, 404
         try:
             user.delete_user()
         except:
-            return {"message": "An internal error ocurred trying to delete User."}, 500 # Internal server error.     
+            return {'message': 'An internal error ocurred trying to delete User.'}, 500 # Internal server error.     
         
-        return {'message': "User deleted"}, 200
+        return {'message': 'User deleted'}, 200
 
 class UserRegister(Resource):
     # /cadastro
@@ -48,11 +48,11 @@ class UserRegister(Resource):
         dados = atributos.parse_args()
 
         if UserModel.find_by_login(dados['login']):
-            return {"message": f"The login '{dados['login']}' already exists"}
+            return {'message': f"The login '{dados['login']}' already exists"}
 
         user = UserModel(**dados)
         user.save_user()
-        return {"message": "User created successfully!"}, 201 #Created
+        return {'message': 'User created successfully!'}, 201 #Created
 
 class UserLogin(Resource):
     @classmethod
@@ -62,14 +62,14 @@ class UserLogin(Resource):
         user = UserModel.find_by_login(dados['login'])
         
         if not user or not safe_str_cmp(user.senha, dados['senha']):
-            return {"message": "User or Password incorrect!"}, 401 #Unauthorized
+            return {'message': 'User or Password incorrect!'}, 401 #Unauthorized
 
         token_de_acesso = create_access_token(identity=user.user_id)
-        return {"access_token": token_de_acesso}, 200
+        return {'access_token': token_de_acesso}, 200
 
 class UserLogout(Resource):
     @jwt_required
     def post(self):
         jwt_id = get_raw_jwt()['jti'] #JWT Token Identifier
         BLACKLIST.add(jwt_id)
-        return {"message": "Logged out successfully" }
+        return {'message': 'Logged out successfully' }

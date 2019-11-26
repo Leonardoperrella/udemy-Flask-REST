@@ -76,7 +76,7 @@ class Hotel(Resource):
             return {'message': 'Hotel not found'}, 404
         return hotel.json()
 
-    #@jwt_required
+    @jwt_required
     def post(self, hotel_id):
 
         dados = self.argumentos.parse_args()

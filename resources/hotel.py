@@ -43,12 +43,12 @@ class Hoteis(Resource):
         hoteis = []
         for linha in resultado:
             hoteis.append({
-                'hotel_id': linha[0],
-                'nome': linha[1],
-                'estrelas': linha[2],
-                'diaria': linha[3],
-                'cidade': linha[4],
-                'site_id': linha[5]})
+                'hotel_id': linha[1],
+                'nome': linha[2],
+                'estrelas': linha[3],
+                'diaria': linha[4],
+                'cidade': linha[5],
+                'site_id': linha[6]})
 
         return {'hoteis': hoteis}
 
@@ -76,7 +76,7 @@ class Hotel(Resource):
             return {'message': 'Hotel not found'}, 404
         return hotel.json()
 
-    @jwt_required
+    #@jwt_required
     def post(self, hotel_id):
 
         dados = self.argumentos.parse_args()

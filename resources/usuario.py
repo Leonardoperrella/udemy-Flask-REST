@@ -18,6 +18,11 @@ atributos.add_argument('senha',
                         help='The field senha cannot be blank'
                         )
 
+atributos.add_argument('ativo',
+                        default=False,
+                        type=bool, 
+                        )
+
 class User(Resource):   
     # /usuarios/{user_id}
     def get(self, user_id):
@@ -28,7 +33,7 @@ class User(Resource):
             return {'message': 'User not found'}, 404
         return user.json()
 
-    @jwt_required
+    #@jwt_required
     def delete(self, user_id):
         
         user = UserModel.find_user(user_id)
@@ -51,6 +56,7 @@ class UserRegister(Resource):
             return {'message': f"The login '{dados['login']}' already exists"}
 
         user = UserModel(**dados)
+        user.ativo = False
         user.save_user()
         return {'message': 'User created successfully!'}, 201 #Created
 
@@ -63,6 +69,9 @@ class UserLogin(Resource):
         
         if not user or not safe_str_cmp(user.senha, dados['senha']):
             return {'message': 'User or Password incorrect!'}, 401 #Unauthorized
+        
+        if not user.ativo:
+            return {'message': 'User not activated!'}, 401 #Unauthorized
 
         token_de_acesso = create_access_token(identity=user.user_id)
         return {'access_token': token_de_acesso}, 200
@@ -73,3 +82,21 @@ class UserLogout(Resource):
         jwt_id = get_raw_jwt()['jti'] #JWT Token Identifier
         BLACKLIST.add(jwt_id)
         return {'message': 'Logged out successfully' }
+
+
+class UserConfirm(Resource):
+    #/confirmacao/{user_id}
+    @classmethod
+    def get(cls, user_id):
+        user = UserModel.find_user(user_id)
+
+        if not user:
+            {'message': f'User id {user_id} not found'}, 404
+
+        user.ativo = True
+        user.save_user()
+        return {'message': f'User id {user_id} confimed successfully'}, 200
+
+
+
+            
